@@ -1,22 +1,17 @@
-# 开源前审计报告（2026-08-24）
+# 开源发布审计报告（2026-08-24）
 
 ## 审计范围
 
 - 仓库：`liuzhaohong199510/codex-realtime-voice-wake-gate`
 - 最终分支：`main`
-- 开源资料最终提交：`b6f9e93`
-- 审计对象：当前受 Git 跟踪文件、完整 Git 历史、依赖声明、模型和驱动分发边界、自动化测试与本机只读音频预检。
-
-本报告不等于仓库已经公开，也不等于 GitHub Release 已经发布。
+- `v0.1.0` 标签提交：`2f3c86b`
+- 审计对象：当前受 Git 跟踪文件、完整 Git 历史、依赖声明、模型和驱动分发边界、自动化测试、本机只读音频预检与 GitHub 公开发布结果。
 
 ## 结论
 
-当前资料已经合并到 `main` 并达到“可提交公开评审”的本地标准，但仍有外部关卡：
+仓库已经切换为 Public，`v0.1.0` 已按实验性 Pre-release 发布。公开页面、README、LICENSE、标签、Release、About、Topics、Issues 和私密漏洞报告入口均已核验。
 
-1. GitHub About、Topics 和 Private vulnerability reporting 尚未设置。
-2. 仓库仍应保持 Private，直到用户最终确认。
-3. `v0.1.0` 标签和 Release 尚未创建。
-4. README Mermaid 图仍需在 GitHub 页面人工查看。
+支持边界固定为单任务场景。多任务并行时已观察到 Codex Desktop 实时语音会话状态或事件路由冲突；本项目不通过客户端注入或补丁修复该内部问题。
 
 ## 已验证结果
 
@@ -34,6 +29,13 @@
 | 禁止扩展名扫描 | PASS | 未跟踪录音、模型、驱动、安装包、数据库、日志或证书 |
 | 大对象扫描 | PASS | 最大受跟踪对象为 `LICENSE`，约 11 KB |
 | Git 提交邮箱 | 可接受 | 历史使用 `local.invalid` 占位域，不暴露真实邮箱 |
+| GitHub 可见性 | PASS，Public | 公开 API 返回 `private=false`、`visibility=public` |
+| 仓库展示资料 | PASS | About 和 12 个通用技术 Topics 已公开显示 |
+| README Mermaid | PASS | GitHub 页面已实际渲染音频门控流程图 |
+| 私密漏洞报告 | PASS | Private vulnerability reporting 已启用 |
+| 首版 Release | PASS | `v0.1.0` 为 Pre-release，Release 附件数为 0 |
+| 公开文件访问 | PASS | README 和 LICENSE 的公开请求均返回成功 |
+| 标签源码树 | PASS，76 个条目 | 不含模型目录、驱动、录音、数据库、日志、证书或禁止扩展名文件 |
 
 ## 第三方边界
 
@@ -60,10 +62,10 @@ VB-CABLE 是 VB-Audio Donationware，不属于 Apache-2.0 项目内容。项目�
 
 详细记录见 `stage-b-human-e2e-acceptance-2026-08-24.md`。
 
-## 公开前剩余动作
+## 发布后的已知边界
 
-1. 设置仓库 About 和 Topics。
-2. 开启 Private vulnerability reporting。
-3. 用户明确确认将仓库设为 Public。
-4. 使用未登录窗口验证 README、LICENSE 和文档可访问。
-5. 确认稳定后创建实验性 `v0.1.0` Release，不附带模型或驱动。
+1. 仅在 Windows 11、当前硬件和已记录的 Codex Desktop 版本完成真人验收。
+2. 多任务实时语音不保证可用；待 Codex Desktop 官方修复相关会话路由后再重新验证。
+3. Windows 10、休眠恢复、设备热插拔和长时间连续运行尚未系统验证。
+4. 模型权重和 VB-CABLE 驱动不进入仓库或 Release，使用者必须从上游自行获取并核对许可。
+5. 当前项目在 `v0.1.0` 发布后停止继续扩展；保留源码、测试和文档供社区复用。

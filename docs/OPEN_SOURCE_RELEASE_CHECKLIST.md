@@ -11,7 +11,7 @@
 - [x] 已加入 Issue 和 Pull Request 模板。
 - [x] 已准备 About、Topics 和首版 Release 文案。
 - [x] 所有 Markdown 相对链接通过本地检查。
-- [ ] README 中的 Mermaid 图在 GitHub 页面正常渲染。
+- [x] README 中的 Mermaid 图在 GitHub 页面正常渲染。
 
 ## 2. 隐私和敏感信息
 
@@ -46,26 +46,27 @@
 
 - [x] 开源资料分支已经评审并快进合并到 `main`。
 - [x] `main` 与 `origin/main` 一致。
-- [ ] 仓库 About 简介已设置。
-- [ ] Topics 已设置。
-- [ ] Issues 和 Pull Requests 可用。
-- [ ] Private vulnerability reporting 已启用。
-- [ ] 公开前没有含敏感信息的 Actions 日志或构建产物。
-- [ ] 用户已最终确认把仓库从 Private 改为 Public。
-- [ ] 仓库可见性已经切换为 Public。
-- [ ] 未登录浏览器能够打开 README、LICENSE 和文档。
+- [x] 仓库 About 简介已设置。
+- [x] Topics 已设置。
+- [x] Issues 和 Pull Requests 可用。
+- [x] Private vulnerability reporting 已启用。
+- [x] 公开前没有含敏感信息的 Actions 日志或构建产物。
+- [x] 用户已最终确认把仓库从 Private 改为 Public。
+- [x] 仓库可见性已经切换为 Public。
+- [x] 未登录公开请求能够打开 README、LICENSE 和仓库文档。
 
 ## 6. 首版发布
 
-- [ ] 创建 `v0.1.0` 标签。
-- [ ] 使用 `RELEASE_NOTES_v0.1.0.md` 创建 GitHub Release。
-- [ ] Release 不附带模型、驱动、录音或本机生成文件。
-- [ ] Release 标记为 pre-release 或明确标注实验性。
-- [ ] 下载的源码归档中不存在被忽略的大文件。
+- [x] 创建 `v0.1.0` 标签。
+- [x] 使用 `RELEASE_NOTES_v0.1.0.md` 创建 GitHub Release。
+- [x] Release 不附带模型、驱动、录音或本机生成文件。
+- [x] Release 标记为 pre-release 并明确标注实验性。
+- [x] 标签源码树共 76 个条目，不包含模型目录或禁止扩展名文件。
 
 ## 最终签字
 
 - 技术验证人：Codex，本地自动验证记录见 `OPEN_SOURCE_AUDIT_2026-08-24.md`
 - 人工验收人：项目用户，核心实时语音链路已于 2026-08-24 验收
-- 公开授权：待用户最终确认
-- 公开日期：待定
+- 公开授权：用户已于 2026-08-24 明确授权并完成 GitHub 身份验证
+- 公开日期：2026-08-24
+- 发布结果：`v0.1.0` 实验性 Pre-release 已公开；支持边界仅限单任务场景
