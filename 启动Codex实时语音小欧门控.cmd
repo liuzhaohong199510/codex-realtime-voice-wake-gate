@@ -15,8 +15,11 @@ if not exist "%MODEL_DIR%" (
   exit /b 2
 )
 "%PYTHON_EXE%" "%~dp0run_live_bridge.py" --model "%MODEL_DIR%"
-if errorlevel 1 (
-  echo.
+set "EXIT_CODE=%ERRORLEVEL%"
+echo.
+if not "%EXIT_CODE%"=="0" (
   echo 门控未正常运行，请把上面的错误信息发给 Codex。
-  pause
 )
+echo 门控已停止，请把 Codex 麦克风恢复为系统默认。
+pause
+exit /b %EXIT_CODE%
