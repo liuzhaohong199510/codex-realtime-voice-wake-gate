@@ -1,0 +1,10 @@
+.venv/
+models/
+test_audio/
+__pycache__/
+*.py[cod]
+*.wav
+*.zip
+*.log
+.pytest_cache/
+.coverage
