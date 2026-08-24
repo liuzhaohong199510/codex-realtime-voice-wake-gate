@@ -22,9 +22,15 @@ def capture_trial(
     *,
     sample_rate: int = 16_000,
     blocksize: int = 4_000,
+    min_confidence: float = 0.0,
 ) -> AcceptanceObservation:
     initial_state = gate.state
-    session = KeywordDetectionSession(recognizer, gate)
+    session = KeywordDetectionSession(
+        recognizer,
+        gate,
+        min_confidence=min_confidence,
+        accept_partial=False,
+    )
     events: list[GateEvent] = []
     failed = False
     chunk_count = max(

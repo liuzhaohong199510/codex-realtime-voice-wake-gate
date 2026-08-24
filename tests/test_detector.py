@@ -35,7 +35,7 @@ class KeywordDetectionSessionTests(unittest.TestCase):
         self.assertEqual(result.event, GateEvent.OPENED)
         self.assertEqual(gate.state, GateState.OPEN)
 
-    def test_partial_stop_phrase_closes_gate(self):
+    def test_partial_stop_phrase_does_not_close_gate_before_final_result(self):
         gate = VoiceGate("小欧", "结束")
         gate.handle_recognition("小欧")
         session = KeywordDetectionSession(
@@ -44,8 +44,8 @@ class KeywordDetectionSessionTests(unittest.TestCase):
 
         result = session.process_pcm(b"audio")
 
-        self.assertEqual(result.event, GateEvent.CLOSED)
-        self.assertEqual(gate.state, GateState.CLOSED)
+        self.assertIsNone(result)
+        self.assertEqual(gate.state, GateState.OPEN)
 
     def test_repeated_partial_is_not_emitted_twice(self):
         gate = VoiceGate("小欧", "结束")
@@ -56,8 +56,45 @@ class KeywordDetectionSessionTests(unittest.TestCase):
         first = session.process_pcm(b"audio")
         second = session.process_pcm(b"audio")
 
-        self.assertEqual(first.event, GateEvent.OPENED)
+        self.assertIsNone(first)
         self.assertIsNone(second)
+        self.assertEqual(gate.state, GateState.CLOSED)
+
+    def test_low_confidence_final_control_phrase_is_ignored(self):
+        gate = VoiceGate("小欧", "结束")
+        session = KeywordDetectionSession(
+            FakeRecognizer(
+                final_payload=(
+                    '{"text":"小欧","result":'
+                    '[{"word":"小欧","conf":0.42}]}'
+                )
+            ),
+            gate,
+            min_confidence=0.65,
+        )
+
+        result = session.process_pcm(b"audio")
+
+        self.assertIsNone(result)
+        self.assertEqual(gate.state, GateState.CLOSED)
+
+    def test_high_confidence_final_control_phrase_opens_gate(self):
+        gate = VoiceGate("小欧", "结束")
+        session = KeywordDetectionSession(
+            FakeRecognizer(
+                final_payload=(
+                    '{"text":"小欧","result":'
+                    '[{"word":"小欧","conf":0.91}]}'
+                )
+            ),
+            gate,
+            min_confidence=0.65,
+        )
+
+        result = session.process_pcm(b"audio")
+
+        self.assertEqual(result.event, GateEvent.OPENED)
+        self.assertEqual(gate.state, GateState.OPEN)
 
     def test_invalid_recognizer_payload_fails_closed(self):
         gate = VoiceGate("小欧", "结束")

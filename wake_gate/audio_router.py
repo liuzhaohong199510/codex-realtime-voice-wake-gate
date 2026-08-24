@@ -17,9 +17,15 @@ class LocalAudioRouter:
         wake_phrase: str = "小欧",
         stop_phrase: str = "结束",
         delay_chunks: int = 4,
+        min_confidence: float = 0.65,
     ) -> None:
         self._gate = VoiceGate(wake_phrase, stop_phrase)
-        self._session = KeywordDetectionSession(recognizer, self._gate)
+        self._session = KeywordDetectionSession(
+            recognizer,
+            self._gate,
+            min_confidence=min_confidence,
+            accept_partial=False,
+        )
         self._audio_gate = DelayedAudioGate(delay_chunks)
         self._last_event = GateEvent.NONE
         self._failure_reason: str | None = None

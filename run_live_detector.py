@@ -12,12 +12,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", type=int, default=None)
     parser.add_argument("--seconds", type=float, default=None)
+    parser.add_argument("--min-confidence", type=float, default=0.65)
     args = parser.parse_args()
     model_path = Path(__file__).parent / "models" / "vosk-model-small-cn-0.22"
     return run_live_detector(
         model_path,
         device=args.device,
         duration_seconds=args.seconds,
+        min_confidence=args.min_confidence,
     )
 
 

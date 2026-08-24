@@ -21,24 +21,32 @@ def keyword_grammar(wake_phrase: str, stop_phrase: str) -> str:
     return json.dumps([wake_phrase, stop_phrase, "[unk]"], ensure_ascii=False)
 
 
+def build_full_vocabulary_recognizer(speech_api, model):
+    recognizer = speech_api.KaldiRecognizer(model, SAMPLE_RATE)
+    recognizer.SetWords(True)
+    return recognizer
+
+
 def run_live_detector(
     model_path: Path,
     *,
     device: int | None = None,
     duration_seconds: float | None = None,
+    min_confidence: float = 0.65,
 ) -> int:
     if not model_path.is_dir():
         raise FileNotFoundError(f"Vosk model directory not found: {model_path}")
 
     vosk.SetLogLevel(-1)
     model = vosk.Model(str(model_path))
-    recognizer = vosk.KaldiRecognizer(
-        model,
-        SAMPLE_RATE,
-        keyword_grammar("小欧", "结束"),
-    )
+    recognizer = build_full_vocabulary_recognizer(vosk, model)
     gate = VoiceGate("小欧", "结束")
-    session = KeywordDetectionSession(recognizer, gate)
+    session = KeywordDetectionSession(
+        recognizer,
+        gate,
+        min_confidence=min_confidence,
+        accept_partial=False,
+    )
     audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=32)
 
     def callback(indata, _frames, _time_info, status) -> None:

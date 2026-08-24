@@ -20,11 +20,12 @@ from wake_gate.acceptance import (
     report_payload,
 )
 from wake_gate.core import GateEvent, VoiceGate
-from wake_gate.live import SAMPLE_RATE, keyword_grammar
+from wake_gate.live import SAMPLE_RATE
 from wake_gate.trial_capture import capture_trial
 
 
 BLOCKSIZE = 4_000
+DEFAULT_MIN_CONFIDENCE = 0.65
 
 
 def run_acceptance(
@@ -36,9 +37,13 @@ def run_acceptance(
     speech_api: Any = vosk,
     read_line: Callable[[str], str] = input,
     emit: Callable[[str], object] = print,
+    min_confidence: float = DEFAULT_MIN_CONFIDENCE,
 ) -> int:
     if not model_path.is_dir():
         emit(f"未找到本地 Vosk 模型：{model_path}。不会打开麦克风。")
+        return 2
+    if not 0.0 <= min_confidence <= 1.0:
+        emit("置信度阈值必须在 0 到 1 之间。不会打开麦克风。")
         return 2
 
     speech_api.SetLogLevel(-1)
@@ -47,6 +52,10 @@ def run_acceptance(
     observations: list[AcceptanceObservation] = []
 
     emit("阶段 A 十组真人验收：不保存音频，不保存全文转写。输入 q 可在开麦前退出。")
+    emit(
+        "安全识别：完整中文词表、仅最终结果、"
+        f"最低置信度={min_confidence:.2f}。"
+    )
     for index, scenario in enumerate(scenarios, start=1):
         emit(f"[{index}/{len(scenarios)}] {scenario.instruction}")
         answer = read_line("准备好后按 Enter 开始；输入 q 退出：")
@@ -55,11 +64,8 @@ def run_acceptance(
             emit("已退出，门控保持关闭，麦克风未为本场景打开。")
             return 3
 
-        recognizer = speech_api.KaldiRecognizer(
-            model,
-            SAMPLE_RATE,
-            keyword_grammar("小欧", "结束"),
-        )
+        recognizer = speech_api.KaldiRecognizer(model, SAMPLE_RATE)
+        recognizer.SetWords(True)
         initial_state = gate.state
         try:
             with audio_api.RawInputStream(
@@ -69,7 +75,13 @@ def run_acceptance(
                 dtype="int16",
                 channels=1,
             ) as stream:
-                observed = capture_trial(scenario, stream, recognizer, gate)
+                observed = capture_trial(
+                    scenario,
+                    stream,
+                    recognizer,
+                    gate,
+                    min_confidence=min_confidence,
+                )
         except Exception as exc:
             failed = gate.fail_safe(f"{type(exc).__name__}: {exc}")
             observed = AcceptanceObservation(
@@ -100,12 +112,21 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", type=int, default=None)
     parser.add_argument(
+        "--min-confidence",
+        type=float,
+        default=DEFAULT_MIN_CONFIDENCE,
+    )
+    parser.add_argument(
         "--model",
         type=Path,
         default=Path(__file__).parent / "models" / "vosk-model-small-cn-0.22",
     )
     args = parser.parse_args()
-    return run_acceptance(args.model, device=args.device)
+    return run_acceptance(
+        args.model,
+        device=args.device,
+        min_confidence=args.min_confidence,
+    )
 
 
 if __name__ == "__main__":

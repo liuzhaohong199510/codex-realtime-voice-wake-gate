@@ -6,15 +6,19 @@ from wake_gate.core import GateEvent, GateState
 
 
 class ScriptedRecognizer:
-    def __init__(self, results):
+    def __init__(self, results, confidence=0.95):
         self._results = iter(results)
+        self._confidence = confidence
         self._current = '{"text": ""}'
 
     def AcceptWaveform(self, _data):
         result = next(self._results, "")
         if isinstance(result, Exception):
             raise result
-        self._current = json.dumps({"text": result}, ensure_ascii=False)
+        payload = {"text": result}
+        if result:
+            payload["result"] = [{"word": result, "conf": self._confidence}]
+        self._current = json.dumps(payload, ensure_ascii=False)
         return True
 
     def Result(self):
@@ -28,6 +32,18 @@ class ScriptedRecognizer:
 
 
 class LocalAudioRouterTests(unittest.TestCase):
+    def test_low_confidence_wake_candidate_does_not_open_router(self):
+        router = LocalAudioRouter(
+            ScriptedRecognizer(["小欧"], confidence=0.25),
+            delay_chunks=2,
+        )
+
+        output = router.process_chunk(b"wake")
+
+        self.assertEqual(output, b"\x00" * 4)
+        self.assertEqual(router.state, GateState.CLOSED)
+        self.assertEqual(router.last_event, GateEvent.NONE)
+
     def test_closed_router_outputs_same_length_silence(self):
         router = LocalAudioRouter(ScriptedRecognizer([""]), delay_chunks=2)
 

@@ -9,6 +9,16 @@ class ParseVoskResultTests(unittest.TestCase):
 
         self.assertEqual(result.kind, RecognitionKind.FINAL)
         self.assertEqual(result.text, "小 欧")
+        self.assertIsNone(result.confidence)
+
+    def test_extracts_lowest_word_confidence_from_final_result(self):
+        result = parse_vosk_result(
+            '{"text":"小 欧","result":['
+            '{"word":"小","conf":0.91},{"word":"欧","conf":0.73}]}'
+        )
+
+        self.assertEqual(result.kind, RecognitionKind.FINAL)
+        self.assertEqual(result.confidence, 0.73)
 
     def test_extracts_partial_text(self):
         result = parse_vosk_result('{"partial": "结束"}')
