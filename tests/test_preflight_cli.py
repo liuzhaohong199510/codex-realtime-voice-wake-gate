@@ -4,12 +4,16 @@ from preflight_virtual_audio import configure_utf8_output, run_preflight
 
 
 class FakeAudioApi:
-    def __init__(self, devices):
+    def __init__(self, devices, hostapis=None):
         self._devices = devices
+        self._hostapis = hostapis or []
         self.checked = []
 
     def query_devices(self):
         return self._devices
+
+    def query_hostapis(self):
+        return self._hostapis
 
     def check_output_settings(self, **kwargs):
         self.checked.append(kwargs)
@@ -64,6 +68,26 @@ class PreflightCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertTrue(any("[1] CABLE Input" in message for message in messages))
         self.assertEqual(api.checked[0]["device"], 1)
+
+    def test_duplicate_portaudio_views_report_the_wasapi_endpoint(self):
+        api = FakeAudioApi(
+            [
+                {"name": "CABLE Input (VB-Audio Virtual C", "hostapi": 0, "max_output_channels": 16},
+                {"name": "CABLE Input (VB-Audio Virtual Cable)", "hostapi": 1, "max_output_channels": 16},
+                {"name": "CABLE Input (VB-Audio Virtual Cable)", "hostapi": 2, "max_output_channels": 2},
+            ],
+            [
+                {"name": "MME"},
+                {"name": "Windows DirectSound"},
+                {"name": "Windows WASAPI"},
+            ],
+        )
+        messages = []
+
+        exit_code = run_preflight(api, messages.append)
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(api.checked[0]["device"], 2)
 
 
 if __name__ == "__main__":

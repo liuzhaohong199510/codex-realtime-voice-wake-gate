@@ -25,13 +25,17 @@ def run_preflight(
     result = preflight_virtual_cable(
         audio_api.query_devices(),
         audio_api.check_output_settings,
+        hostapis=audio_api.query_hostapis(),
     )
 
     if result.status is RouteStatus.READY:
         target = result.target
         assert target is not None
         name = console_safe(target.name, sys.stdout.encoding)
-        emit(f"检查通过：将仅路由到 [{target.index}] {name}。")
+        emit(
+            f"检查通过：将仅路由到 [{target.index}] {name} "
+            f"@ {target.sample_rate} Hz。"
+        )
         return 0
 
     emit(
