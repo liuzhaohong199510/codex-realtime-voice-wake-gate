@@ -12,10 +12,24 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", type=int, default=None)
     parser.add_argument("--seconds", type=float, default=None)
+    parser.add_argument(
+        "--model",
+        type=Path,
+        default=(
+            Path(__file__).parent
+            / "models"
+            / "sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20"
+        ),
+    )
+    parser.add_argument(
+        "--keywords-file",
+        type=Path,
+        default=Path(__file__).parent / "config" / "keywords.txt",
+    )
     args = parser.parse_args()
-    model_path = Path(__file__).parent / "models" / "vosk-model-small-cn-0.22"
     return run_live_detector(
-        model_path,
+        args.model,
+        keywords_file=args.keywords_file,
         device=args.device,
         duration_seconds=args.seconds,
     )

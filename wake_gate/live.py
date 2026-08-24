@@ -2,41 +2,38 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import queue
 import time
 
 import sounddevice as sd
-import vosk
 
 from .core import GateEvent, VoiceGate
 from .detector import KeywordDetectionSession
+from .sherpa_adapter import SherpaKeywordRecognizer, create_keyword_spotter
 
 
 SAMPLE_RATE = 16_000
 
 
-def keyword_grammar(wake_phrase: str, stop_phrase: str) -> str:
-    return json.dumps([wake_phrase, stop_phrase, "[unk]"], ensure_ascii=False)
-
-
 def run_live_detector(
     model_path: Path,
     *,
+    keywords_file: Path,
     device: int | None = None,
     duration_seconds: float | None = None,
+    audio_api: object = sd,
+    sherpa_api: object | None = None,
 ) -> int:
-    if not model_path.is_dir():
-        raise FileNotFoundError(f"Vosk model directory not found: {model_path}")
+    if sherpa_api is None:
+        import sherpa_onnx as sherpa_api
 
-    vosk.SetLogLevel(-1)
-    model = vosk.Model(str(model_path))
-    recognizer = vosk.KaldiRecognizer(
-        model,
-        SAMPLE_RATE,
-        keyword_grammar("小欧", "结束"),
+    keyword_spotter = create_keyword_spotter(
+        model_path,
+        keywords_file,
+        sherpa_api=sherpa_api,
     )
+    recognizer = SherpaKeywordRecognizer(keyword_spotter, sample_rate=SAMPLE_RATE)
     gate = VoiceGate("小欧", "结束")
     session = KeywordDetectionSession(recognizer, gate)
     audio_queue: queue.Queue[bytes] = queue.Queue(maxsize=32)
@@ -52,7 +49,7 @@ def run_live_detector(
     started = time.monotonic()
     print("状态：未唤醒。说“小欧”开始，说“结束”关闭。按 Ctrl+C 停止。")
     try:
-        with sd.RawInputStream(
+        with audio_api.RawInputStream(
             samplerate=SAMPLE_RATE,
             blocksize=4_000,
             device=device,

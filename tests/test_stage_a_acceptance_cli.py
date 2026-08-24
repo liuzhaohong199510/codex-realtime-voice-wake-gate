@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -8,38 +7,46 @@ from wake_gate.acceptance import AcceptanceScenario
 from wake_gate.core import GateEvent, GateState
 
 
-class FakeRecognizer:
-    def __init__(self, text):
-        self._text = text
-
-    def AcceptWaveform(self, _data):
-        return True
-
-    def Result(self):
-        text, self._text = self._text, ""
-        return json.dumps({"text": text}, ensure_ascii=False)
-
-    def PartialResult(self):
-        return '{"partial": ""}'
-
-    def FinalResult(self):
-        return '{"text": ""}'
-
-
 class FakeSpeechApi:
     def __init__(self, recognized_text):
         self.recognized_text = recognized_text
-        self.model_paths = []
+        self.kwargs = None
 
-    def SetLogLevel(self, _level):
+    def KeywordSpotter(self, **kwargs):
+        self.kwargs = kwargs
+        return FakeKeywordSpotter(self.recognized_text)
+
+
+class FakeSherpaStream:
+    def __init__(self):
+        self.ready = False
+
+    def accept_waveform(self, _sample_rate, _samples):
+        self.ready = True
+
+
+class FakeKeywordSpotter:
+    def __init__(self, recognized_text):
+        self.recognized_text = recognized_text
+        self.emitted = False
+
+    def create_stream(self):
+        return FakeSherpaStream()
+
+    def is_ready(self, stream):
+        return stream.ready
+
+    def decode_stream(self, stream):
+        stream.ready = False
+
+    def get_result(self, _stream):
+        if self.emitted:
+            return ""
+        self.emitted = True
+        return self.recognized_text
+
+    def reset_stream(self, _stream):
         pass
-
-    def Model(self, path):
-        self.model_paths.append(path)
-        return object()
-
-    def KaldiRecognizer(self, _model, _sample_rate, _grammar):
-        return FakeRecognizer(self.recognized_text)
 
 
 class FakeInputStream:
@@ -74,17 +81,34 @@ def one_wake_scenario():
 
 
 class StageAAcceptanceCliTests(unittest.TestCase):
+    required_names = (
+        "tokens.txt",
+        "encoder-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
+        "decoder-epoch-13-avg-2-chunk-16-left-64.onnx",
+        "joiner-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
+    )
+
+    def prepare_model(self, model_dir):
+        for name in self.required_names:
+            (model_dir / name).touch()
+        keywords = model_dir / "keywords.txt"
+        keywords.write_text("x iǎo ōu @小欧", encoding="utf-8")
+        return keywords
+
     def test_user_started_trial_runs_in_memory_and_reports_pass(self):
         with tempfile.TemporaryDirectory() as model_dir:
+            model_dir = Path(model_dir)
+            keywords = self.prepare_model(model_dir)
             audio_api = FakeAudioApi()
             speech_api = FakeSpeechApi("小欧")
             messages = []
 
             exit_code = run_acceptance(
-                Path(model_dir),
+                model_dir,
+                keywords_file=keywords,
                 scenarios=(one_wake_scenario(),),
                 audio_api=audio_api,
-                speech_api=speech_api,
+                sherpa_api=speech_api,
                 read_line=lambda _prompt: "",
                 emit=messages.append,
             )
@@ -95,13 +119,16 @@ class StageAAcceptanceCliTests(unittest.TestCase):
 
     def test_user_can_cancel_before_microphone_is_opened(self):
         with tempfile.TemporaryDirectory() as model_dir:
+            model_dir = Path(model_dir)
+            keywords = self.prepare_model(model_dir)
             audio_api = FakeAudioApi()
 
             exit_code = run_acceptance(
-                Path(model_dir),
+                model_dir,
+                keywords_file=keywords,
                 scenarios=(one_wake_scenario(),),
                 audio_api=audio_api,
-                speech_api=FakeSpeechApi("小欧"),
+                sherpa_api=FakeSpeechApi("小欧"),
                 read_line=lambda _prompt: "q",
                 emit=lambda _message: None,
             )
@@ -111,13 +138,14 @@ class StageAAcceptanceCliTests(unittest.TestCase):
 
     def test_missing_model_fails_before_microphone_is_opened(self):
         audio_api = FakeAudioApi()
-        missing = Path("Z:/definitely-missing-vosk-model")
+        missing = Path("Z:/definitely-missing-sherpa-model")
 
         exit_code = run_acceptance(
             missing,
+            keywords_file=missing / "keywords.txt",
             scenarios=(one_wake_scenario(),),
             audio_api=audio_api,
-            speech_api=FakeSpeechApi("小欧"),
+            sherpa_api=FakeSpeechApi("小欧"),
             read_line=lambda _prompt: "",
             emit=lambda _message: None,
         )

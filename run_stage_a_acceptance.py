@@ -9,7 +9,6 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 import sounddevice as sd
-import vosk
 
 from preflight_virtual_audio import configure_utf8_output
 from wake_gate.acceptance import (
@@ -20,7 +19,8 @@ from wake_gate.acceptance import (
     report_payload,
 )
 from wake_gate.core import GateEvent, VoiceGate
-from wake_gate.live import SAMPLE_RATE, keyword_grammar
+from wake_gate.live import SAMPLE_RATE
+from wake_gate.sherpa_adapter import SherpaKeywordRecognizer, create_keyword_spotter
 from wake_gate.trial_capture import capture_trial
 
 
@@ -30,23 +30,36 @@ BLOCKSIZE = 4_000
 def run_acceptance(
     model_path: Path,
     *,
+    keywords_file: Path,
     scenarios: Sequence[AcceptanceScenario] = DEFAULT_ACCEPTANCE_SCENARIOS,
     device: int | None = None,
     audio_api: Any = sd,
-    speech_api: Any = vosk,
+    sherpa_api: Any = None,
     read_line: Callable[[str], str] = input,
     emit: Callable[[str], object] = print,
+    keywords_score: float = 1.0,
+    keywords_threshold: float = 0.25,
 ) -> int:
-    if not model_path.is_dir():
-        emit(f"未找到本地 Vosk 模型：{model_path}。不会打开麦克风。")
+    if sherpa_api is None:
+        import sherpa_onnx as sherpa_api
+
+    try:
+        keyword_spotter = create_keyword_spotter(
+            model_path,
+            keywords_file,
+            sherpa_api=sherpa_api,
+            keywords_score=keywords_score,
+            keywords_threshold=keywords_threshold,
+        )
+    except (FileNotFoundError, RuntimeError, ValueError) as exc:
+        emit(f"sherpa-onnx 关键词检测未就绪：{exc}。不会打开麦克风。")
         return 2
 
-    speech_api.SetLogLevel(-1)
-    model = speech_api.Model(str(model_path))
     gate = VoiceGate("小欧", "结束")
     observations: list[AcceptanceObservation] = []
 
     emit("阶段 A 十组真人验收：不保存音频，不保存全文转写。输入 q 可在开麦前退出。")
+    emit("识别引擎：sherpa-onnx 关键词检测，仅检测“小欧”和“结束”。")
     for index, scenario in enumerate(scenarios, start=1):
         emit(f"[{index}/{len(scenarios)}] {scenario.instruction}")
         answer = read_line("准备好后按 Enter 开始；输入 q 退出：")
@@ -55,11 +68,7 @@ def run_acceptance(
             emit("已退出，门控保持关闭，麦克风未为本场景打开。")
             return 3
 
-        recognizer = speech_api.KaldiRecognizer(
-            model,
-            SAMPLE_RATE,
-            keyword_grammar("小欧", "结束"),
-        )
+        recognizer = SherpaKeywordRecognizer(keyword_spotter, sample_rate=SAMPLE_RATE)
         initial_state = gate.state
         try:
             with audio_api.RawInputStream(
@@ -102,10 +111,23 @@ def main() -> int:
     parser.add_argument(
         "--model",
         type=Path,
-        default=Path(__file__).parent / "models" / "vosk-model-small-cn-0.22",
+        default=(
+            Path(__file__).parent
+            / "models"
+            / "sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20"
+        ),
+    )
+    parser.add_argument(
+        "--keywords-file",
+        type=Path,
+        default=Path(__file__).parent / "config" / "keywords.txt",
     )
     args = parser.parse_args()
-    return run_acceptance(args.model, device=args.device)
+    return run_acceptance(
+        args.model,
+        keywords_file=args.keywords_file,
+        device=args.device,
+    )
 
 
 if __name__ == "__main__":
