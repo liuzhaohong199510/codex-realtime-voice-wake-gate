@@ -23,5 +23,10 @@
 - Windows UTF-8 设备名称兼容处理。
 - 自动化测试、真人场景验收和 Codex 实时语音端到端验收。
 
+### Known limitations
+
+- 真人验收仅覆盖单任务场景；其他 Codex 任务同时运行时，Codex Desktop 可能发生实时语音会话状态或事件路由冲突。
+- 本项目不修改 Codex 客户端，因此不保证多任务实时语音可用。
+
 [Unreleased]: https://github.com/liuzhaohong199510/codex-realtime-voice-wake-gate/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/liuzhaohong199510/codex-realtime-voice-wake-gate/releases/tag/v0.1.0
