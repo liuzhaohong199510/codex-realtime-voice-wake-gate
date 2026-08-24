@@ -3,21 +3,20 @@
 ## 审计范围
 
 - 仓库：`liuzhaohong199510/codex-realtime-voice-wake-gate`
-- 分支：`codex/open-source-readiness`
-- 开源资料基线提交：`bef8996`
+- 最终分支：`main`
+- 开源资料最终提交：`b6f9e93`
 - 审计对象：当前受 Git 跟踪文件、完整 Git 历史、依赖声明、模型和驱动分发边界、自动化测试与本机只读音频预检。
 
 本报告不等于仓库已经公开，也不等于 GitHub Release 已经发布。
 
 ## 结论
 
-当前资料已经达到“可提交公开评审”的本地标准，但仍有外部关卡：
+当前资料已经合并到 `main` 并达到“可提交公开评审”的本地标准，但仍有外部关卡：
 
-1. 开源资料分支尚未合并到 `main`。
-2. GitHub About、Topics 和 Private vulnerability reporting 尚未设置。
-3. 仓库仍应保持 Private，直到用户最终确认。
-4. `v0.1.0` 标签和 Release 尚未创建。
-5. README Mermaid 图仍需在 GitHub 页面人工查看。
+1. GitHub About、Topics 和 Private vulnerability reporting 尚未设置。
+2. 仓库仍应保持 Private，直到用户最终确认。
+3. `v0.1.0` 标签和 Release 尚未创建。
+4. README Mermaid 图仍需在 GitHub 页面人工查看。
 
 ## 已验证结果
 
@@ -63,10 +62,8 @@ VB-CABLE 是 VB-Audio Donationware，不属于 Apache-2.0 项目内容。项目�
 
 ## 公开前剩余动作
 
-1. 评审开源资料分支并合并到 `main`。
-2. 确认 `main` 与远端一致。
-3. 设置仓库 About 和 Topics。
-4. 开启 Private vulnerability reporting。
-5. 用户明确确认将仓库设为 Public。
-6. 使用未登录窗口验证 README、LICENSE 和文档可访问。
-7. 确认稳定后创建实验性 `v0.1.0` Release，不附带模型或驱动。
+1. 设置仓库 About 和 Topics。
+2. 开启 Private vulnerability reporting。
+3. 用户明确确认将仓库设为 Public。
+4. 使用未登录窗口验证 README、LICENSE 和文档可访问。
+5. 确认稳定后创建实验性 `v0.1.0` Release，不附带模型或驱动。

@@ -44,8 +44,8 @@
 
 ## 5. Git 和 GitHub
 
-- [ ] 开源资料分支已经评审并合并到 `main`。
-- [ ] `main` 与 `origin/main` 一致。
+- [x] 开源资料分支已经评审并快进合并到 `main`。
+- [x] `main` 与 `origin/main` 一致。
 - [ ] 仓库 About 简介已设置。
 - [ ] Topics 已设置。
 - [ ] Issues 和 Pull Requests 可用。
