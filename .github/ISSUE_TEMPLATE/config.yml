@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全或隐私漏洞
+    url: https://github.com/liuzhaohong199510/codex-realtime-voice-wake-gate/security/advisories/new
+    about: 请通过私密渠道报告未唤醒音频外泄、错误路由或其他敏感问题。

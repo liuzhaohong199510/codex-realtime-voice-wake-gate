@@ -1,71 +1,136 @@
-# Codex 实时语音“小欧”门控原型
+# Codex 实时语音“小欧”唤醒门控
 
-这是仅针对 Codex 实时语音聊天的 Windows 本地门控原型。
+> Windows local wake-word audio gate for Codex realtime voice.
 
-当前已验证完成：
+这是一个面向 Windows 的本地隐私小工具：开启 Codex 实时语音聊天后，虚拟麦克风默认只输出静音；说出“小欧”后开始放行语音，说出“结束”后立即恢复静音。
 
-- 默认关闭、说“小欧”开启、说“结束”关闭的状态机。
-- sherpa-onnx 开放词表关键词检测，只检测“小欧”和“结束”。
-- 默认麦克风的只读枚举和短时输入诊断。
-- 官方样例和 Windows 中文合成语音回放验证。
-- 识别结果到延迟音频门控的本地路由核心，控制词不会进入下游音频。
-- VB-CABLE 播放端的只读预检；缺失、重复或格式不兼容时拒绝启动路由。
-- VB-CABLE 官方驱动安装和重启后核验；Windows 默认输入、输出仍为本机设备。
-- 本机麦克风 `16 kHz` 到 VB-CABLE WASAPI `48 kHz` 的门控音频桥。
-- 三秒真实双流安全试运行；未唤醒时仅向虚拟线输出静音，退出后关闭音频流。
-- 双击 `启动Codex实时语音小欧门控.cmd` 可启动真实虚拟线桥。
-- 阶段 A 十组真人验收入口；每组由用户按 Enter 后才开麦，只输出事件和状态结果。
-- Codex 实时语音端到端真人验收：未唤醒无响应、唤醒后放行、说“结束”后再次静音。
-- 验收结束后 Codex 麦克风已恢复为“系统默认”。
-- 异常时回落到关闭状态。
+项目不修改 Codex 客户端，不接管 Windows 默认麦克风，也不在运行时调用网络识别服务。关键词检测在本机完成。
 
-当前客户端限制：
+> [!IMPORTANT]
+> 当前 Codex 客户端把“实时语音聊天”和“听写”共用同一个麦克风设置。本项目通过在实时语音期间临时选择 `CABLE Output`、结束后恢复“系统默认”来限定使用场景；它不能让两种功能同时使用不同麦克风。
 
-- 当前 Codex 的麦克风偏好由实时语音和普通语音输入共用，不能按任务隔离；详见
-  `docs/codex-microphone-scope-2026-08-24.md`。
-- 使用时必须临时选择虚拟麦，结束后恢复“系统默认”；详见 `docs/日常使用说明.md`。
-- 长时间运行、休眠恢复、设备热插拔和客户端升级后的兼容性尚未覆盖。
+## 为什么需要它
 
-## 本地运行
+实时语音会话打开后，麦克风可能持续处于可用状态。面对办公、家庭或多人环境，用户通常只希望把明确说给 Codex 的内容送入会话，而不希望周围谈话持续进入远端服务。
 
-依赖安装在项目目录的 `.venv` 中，模型目录为
-`models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20`。这两个目录均被
-Git 忽略，模型不会上传到 GitHub。
+本项目在真实麦克风和 Codex 之间增加一道本地音频门：
 
-双击 `启动小欧门控原型.cmd` 可启动本地检测。程序不保存音频、不上传音频，按
-`Ctrl+C` 停止。
+- 默认关闭，虚拟麦克风收到静音。
+- 本地识别到“小欧”后持续放行。
+- 本地识别到“结束”后恢复静音。
+- 唤醒词和结束词本身不进入下游音频。
+- 异常、设备错误或缓冲区故障时默认关闭。
 
-双击 `启动Codex实时语音小欧门控.cmd` 会打开真实麦克风与 VB-CABLE 音频桥。默认
-保持静音，说“小欧”后放行，说“结束”后恢复静音。启动该入口本身不修改 Windows
-默认麦克风或 Codex 设置。
+## 工作原理
 
-双击 `验收小欧门控原型.cmd` 运行十组真人验收。Vosk 版本已经由两轮真人结果
-证明不适合本机，不再作为当前验收入口。
+```mermaid
+flowchart LR
+    MIC[真实麦克风] --> KWS[本地关键词检测<br/>sherpa-onnx]
+    MIC --> DELAY[短时延迟缓冲]
+    KWS --> STATE{门控状态}
+    STATE -- 未唤醒/异常 --> SILENCE[输出静音]
+    STATE -- 已唤醒 --> DELAY
+    DELAY --> CABLE[VB-CABLE Input]
+    SILENCE --> CABLE
+    CABLE --> VIRTUAL[CABLE Output 虚拟麦克风]
+    VIRTUAL --> CODEX[Codex 实时语音]
+```
 
-## 验证
+| 你说的话 | 门控状态 | Codex 收到的内容 |
+|---|---|---|
+| 普通谈话 | 关闭 | 静音 |
+| “小欧” | 从关闭变为开启 | 控制词不转发 |
+| 后续连续谈话 | 开启 | 放行 |
+| “结束” | 从开启变为关闭 | 控制词不转发 |
+| 程序异常 | 强制关闭 | 静音 |
+
+## 当前状态
+
+项目目前是 `v0.1.0` 开源准备版本，已在以下环境完成验证：
+
+- Windows 11
+- Python 3.11
+- Codex Desktop `26.818.5229.0`
+- VB-CABLE，虚拟输出原生 `48 kHz`
+- `sherpa-onnx 1.13.6`
+- 74 项自动化测试
+- 真人端到端测试：未唤醒无响应、唤醒后放行、结束后恢复静音
+
+Windows 10、其他 Codex 版本、休眠恢复、设备热插拔和长时间连续运行尚未系统验证。
+
+## 快速开始
+
+完整步骤见 [安装指南](docs/INSTALLATION.md)。核心流程如下：
+
+1. 安装 Python 3.11，并克隆本仓库。
+2. 在项目目录创建 `.venv`，安装 `requirements.txt`。
+3. 从 sherpa-onnx 官方 Release 下载关键词模型，并解压到 `models/`。
+4. 从 VB-Audio 官网安装 VB-CABLE，重启 Windows，并恢复原来的系统默认输入、输出。
+5. 运行只读预检：
+
+   ```powershell
+   .\.venv\Scripts\python.exe .\preflight_virtual_audio.py
+   ```
+
+6. 双击 `启动Codex实时语音小欧门控.cmd`。
+7. 在 Codex 设置中临时把麦克风选择为 `CABLE Output (VB-Audio Virtual Cable)`。
+8. 进入实时语音，说“小欧”开始，说“结束”停止放行。
+9. 退出后停止门控，并把 Codex 麦克风恢复为“系统默认”。
+
+## 隐私边界
+
+- 门控运行期间，真实麦克风音频会在本机内存中交给关键词检测器。
+- 关闭状态下，虚拟麦克风只收到静音。
+- 开启状态下，允许通过的语音会经 VB-CABLE 进入 Codex；此后的数据处理受 Codex/OpenAI 自身设置和政策约束。
+- 本项目不保存录音、不生成全文转写、不上传遥测、不包含网络请求代码。
+- Python 依赖、关键词模型和 VB-CABLE 的下载过程会访问各自的外部网站。
+
+详见 [隐私说明](PRIVACY.md) 和 [安全政策](SECURITY.md)。
+
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [安装指南](docs/INSTALLATION.md) | Python、模型、VB-CABLE 和安装后检查 |
+| [使用指南](docs/USAGE.md) | 日常启停、Codex 设置和安全退出 |
+| [工作原理](docs/ARCHITECTURE.md) | 组件、音频流、状态机和失败保护 |
+| [故障排查](docs/TROUBLESHOOTING.md) | 无响应、设备冲突、编码和恢复方法 |
+| [隐私说明](PRIVACY.md) | 音频何时本地处理、何时进入 Codex |
+| [第三方软件声明](THIRD_PARTY_NOTICES.md) | Python 依赖、模型与 VB-CABLE 许可边界 |
+| [贡献指南](CONTRIBUTING.md) | 开发环境、测试和提交规则 |
+| [路线图](ROADMAP.md) | 已完成能力和候选改进 |
+
+## 已知限制
+
+- 仅验证 Windows 11；没有 macOS 或 Linux 音频路由实现。
+- 依赖外部安装的 VB-CABLE；本仓库不提供、不打包该驱动。
+- 当前 KWS 模型权重的再分发许可证尚未得到发布方明确确认，因此模型不会进入仓库或 Release。
+- 中文短唤醒词存在误识别和漏识别可能，不能承诺零误唤醒。
+- Codex 客户端升级后，设备名称、设置入口或音频行为可能变化。
+- 本项目不能控制 Codex 在门控程序之外如何使用已选麦克风，也不能替代操作系统麦克风权限管理。
+
+## 开发与验证
 
 ```powershell
 $env:PYTHONPATH=(Resolve-Path '.').Path
-& '.\.venv\Scripts\python.exe' -m unittest discover -s tests -v
-& '.\.venv\Scripts\python.exe' '.\preflight_virtual_audio.py'
-& '.\.venv\Scripts\python.exe' '.\run_stage_a_acceptance.py'
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe .\preflight_virtual_audio.py
 ```
 
-预期：全部单元测试通过。VB-CABLE 已安装时，预检应唯一选择 Windows WASAPI 的
-`CABLE Input`，并显示其原生 `48000 Hz`；任何缺失、重复或格式错误都应安全停止。
+真人麦克风验收必须由操作者主动运行：
 
-十组真人验收会逐组显示口述要求。每组只有在按 Enter 后才打开真实麦克风；在提示处
-输入 `q` 可在开麦前退出。程序不写录音文件、不输出全文转写，只在最后输出场景编号、
-门控事件、最终状态和通过/未通过结果。
+```powershell
+.\.venv\Scripts\python.exe .\run_stage_a_acceptance.py
+```
 
-## 安全边界
+测试不会证明所有麦克风、驱动或 Codex 版本都兼容。请在真实环境完成 [公开发布检查清单](docs/OPEN_SOURCE_RELEASE_CHECKLIST.md)。
 
-- Git 不跟踪虚拟环境、识别模型、合成音频、日志或录音。
-- sherpa-onnx 代码为 Apache-2.0；当前模型权重的再分发许可证尚未由发布方明确，
-  因此模型只保留在本机，不上传仓库、不打包发布。
-- 真人验收结果默认只显示在终端，不自动写入磁盘。
-- 未经用户单独确认，不安装驱动、不修改系统音频路由。
-- 预检只能选择名为 `CABLE Input` 的专用播放端，绝不回退到系统默认扬声器。
-- 程序异常时默认关闭门控。
-- Codex 当前把同一个麦克风偏好用于实时语音和普通语音输入；临时选择虚拟麦期间，
-  不得声称普通语音输入仍使用本机麦克风。
+## 参与贡献
+
+欢迎提交问题、改进文档或提供兼容性测试结果。请先阅读 [贡献指南](CONTRIBUTING.md) 和 [行为准则](CODE_OF_CONDUCT.md)。安全或隐私问题不要公开提交，请按 [安全政策](SECURITY.md) 使用私密报告渠道。
+
+## 许可证与声明
+
+本项目代码和项目文档采用 [Apache License 2.0](LICENSE)。第三方软件、模型和驱动保持各自许可证，不因本项目许可证而改变。
+
+本项目是独立社区工具，与 OpenAI、Microsoft、VB-Audio 或 k2-fsa 没有隶属、授权或背书关系。“Codex”“VB-CABLE”和其他名称归各自权利人所有。

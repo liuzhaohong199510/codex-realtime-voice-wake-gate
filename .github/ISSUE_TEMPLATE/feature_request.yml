@@ -1,0 +1,41 @@
+name: 功能建议
+description: 建议一个符合本地隐私和失败关闭原则的改进
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: 你遇到了什么实际问题？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 希望项目如何改进？
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: 隐私和安全影响
+      description: 是否会改变麦克风访问、音频保存、网络请求、驱动或默认设备？
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 怎样才算功能完成且没有降低失败关闭保障？
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已检查路线图和现有 Issue。
+          required: true
+        - label: 该建议不要求捆绑许可不明确的模型或第三方驱动。
+          required: true

@@ -1,0 +1,72 @@
+name: Bug 报告
+description: 报告可重复的功能、兼容性或文档问题
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请勿上传录音、密钥、账户截图、个人目录或安全漏洞细节。安全问题请使用 Security 页面私密报告。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 实际发生了什么？
+      placeholder: 请用脱敏信息描述问题。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 你原本期望发生什么？
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 最小复现步骤
+      description: 请按顺序列出，不要包含敏感音频或凭据。
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows 版本
+      placeholder: 例如 Windows 11 24H2
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python 版本
+      placeholder: 例如 3.11.9
+    validations:
+      required: true
+  - type: input
+    id: codex
+    attributes:
+      label: Codex 版本
+      placeholder: 例如 26.x.x
+    validations:
+      required: true
+  - type: textarea
+    id: audio
+    attributes:
+      label: 音频设备与预检结果
+      description: 只提供设备通用名称和脱敏后的预检输出。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 脱敏错误信息
+      render: shell
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已删除录音、账号、个人路径、密钥和其他隐私信息。
+          required: true
+        - label: 这不是需要私密处理的安全漏洞。
+          required: true
